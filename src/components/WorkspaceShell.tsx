@@ -84,7 +84,14 @@ export function WorkspaceShell({
             })}
           </div>
 
-          <div />
+          <a
+            href="https://www.clipsnap.com/background-remover/"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-brand-200 bg-brand-50 px-4 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
+          >
+            BG Remover
+          </a>
         </div>
       </header>
 
