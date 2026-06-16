@@ -1,4 +1,4 @@
-export type Step = "upload" | "processing" | "layout";
+export type Step = "upload" | "processing" | "optimize" | "layout";
 
 export type CropPoint = {
   x: number;
@@ -37,4 +37,13 @@ export type PrintJob = {
   total: number;
   cutMarks: boolean;
   border: boolean;
+};
+
+export type OptimizationValues = {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  hue: number;
+  warmth: number;
+  reason?: string;
 };

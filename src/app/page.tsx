@@ -4,9 +4,16 @@ import { jsPDF } from "jspdf";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutStep } from "@/components/LayoutStep";
+import { OptimizeStep } from "@/components/OptimizeStep";
 import { ProcessingStep } from "@/components/ProcessingStep";
 import { UploadStep } from "@/components/UploadStep";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
+import { getOptimizationValues } from "@/lib/ai/getOptimizationValues";
+import {
+  applyOptimizationToImage,
+  neutralOptimizationValues,
+  normalizeOptimizationValues,
+} from "@/lib/image/applyOptimization";
 import {
   getCenteredCropArea,
   getCroppedImageDataUrl,
@@ -23,7 +30,10 @@ export default function HomePage() {
   const router = useRouter();
   const store = usePhotoStore();
   const [isPreparingCrop, setIsPreparingCrop] = useState(false);
+  const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
+  const [isApplyingOptimization, setIsApplyingOptimization] = useState(false);
   const [cropWarning, setCropWarning] = useState<string | null>(null);
+  const [optimizeWarning, setOptimizeWarning] = useState<string | null>(null);
 
   const generateCrop = useCallback(
     async (photoSizeOverride?: PhotoSize) => {
@@ -57,7 +67,9 @@ export default function HomePage() {
 
         store.setCropAreaPixels(pixelCrop);
         store.setProcessedImage(croppedImage);
+        store.resetOptimization();
         setCropWarning(null);
+        setOptimizeWarning(null);
         return true;
       } catch {
         store.setProcessedImage(null);
@@ -79,12 +91,14 @@ export default function HomePage() {
   }, [generateCrop, store.currentStep, store.originalImage, store.processedImage]);
 
   const currentJob = useMemo(() => {
-    if (!store.processedImage) {
+    const outputImage = store.optimizedImage ?? store.processedImage;
+
+    if (!outputImage) {
       return null;
     }
 
     return createPrintJob({
-      image: store.processedImage,
+      image: outputImage,
       paperSize: store.selectedPaperSize,
       photoSize: store.selectedPhotoSize,
       marginMm: store.marginMm,
@@ -97,6 +111,7 @@ export default function HomePage() {
     store.cutMarks,
     store.gapMm,
     store.marginMm,
+    store.optimizedImage,
     store.processedImage,
     store.selectedPaperSize,
     store.selectedPhotoSize,
@@ -154,6 +169,8 @@ export default function HomePage() {
         return true;
       case "processing":
         return Boolean(store.originalImage);
+      case "optimize":
+        return Boolean(store.processedImage);
       case "layout":
         return Boolean(store.processedImage);
       default:
@@ -191,15 +208,19 @@ export default function HomePage() {
             store.setCropZoom(1);
             store.setCropAreaPixels(null);
             store.setCropAreaPercent(null);
+            store.resetOptimization();
             setCropWarning(null);
+            setOptimizeWarning(null);
           }}
           onCropChange={(crop) => {
             store.setCrop(crop);
             store.setProcessedImage(null);
+            store.resetOptimization();
           }}
           onCropZoomChange={(zoom) => {
             store.setCropZoom(zoom);
             store.setProcessedImage(null);
+            store.resetOptimization();
           }}
           onCropComplete={(areaPercent, areaPixels) => {
             store.setCropAreaPercent(areaPercent);
@@ -208,6 +229,7 @@ export default function HomePage() {
           onPhotoSizeChange={(size) => {
             store.setSelectedPhotoSize(size);
             store.setProcessedImage(null);
+            store.resetOptimization();
           }}
           onNext={async () => {
             const success = await generateCrop();
@@ -230,13 +252,80 @@ export default function HomePage() {
           warning={cropWarning}
           isLoading={isPreparingCrop}
           onBack={() => safeStepChange("upload")}
-          onNext={() => safeStepChange("layout")}
+          onNext={() => safeStepChange("optimize")}
+        />
+      ) : null}
+
+      {store.currentStep === "optimize" && store.processedImage ? (
+        <OptimizeStep
+          image={store.processedImage}
+          values={store.optimizationValues}
+          warning={optimizeWarning}
+          isAutoOptimizing={isAutoOptimizing}
+          isApplying={isApplyingOptimization}
+          onValueChange={(key, value) => {
+            store.setOptimizationValues(
+              normalizeOptimizationValues({
+                ...store.optimizationValues,
+                [key]: value,
+                reason: "Manual adjustments ready for print preview.",
+              }),
+            );
+            setOptimizeWarning(null);
+          }}
+          onAutoOptimize={async () => {
+            const imageToOptimize = store.processedImage;
+
+            if (!imageToOptimize) {
+              return;
+            }
+
+            setIsAutoOptimizing(true);
+
+            try {
+              const result = await getOptimizationValues(imageToOptimize);
+              store.setOptimizationValues(result.values);
+              setOptimizeWarning(result.warning);
+            } finally {
+              setIsAutoOptimizing(false);
+            }
+          }}
+          onReset={() => {
+            store.setOptimizationValues(neutralOptimizationValues);
+            store.setOptimizedImage(null);
+            setOptimizeWarning(null);
+          }}
+          onBack={() => safeStepChange("processing")}
+          onApply={async () => {
+            const imageToOptimize = store.processedImage;
+
+            if (!imageToOptimize) {
+              return;
+            }
+
+            setIsApplyingOptimization(true);
+
+            try {
+              const optimizedImage = await applyOptimizationToImage(
+                imageToOptimize,
+                store.optimizationValues,
+              );
+              store.setOptimizedImage(optimizedImage);
+              safeStepChange("layout");
+            } catch {
+              store.setOptimizedImage(imageToOptimize);
+              setOptimizeWarning("Auto optimization unavailable. You can adjust manually.");
+              safeStepChange("layout");
+            } finally {
+              setIsApplyingOptimization(false);
+            }
+          }}
         />
       ) : null}
 
       {store.currentStep === "layout" && store.processedImage ? (
         <LayoutStep
-          image={store.processedImage}
+          image={store.optimizedImage ?? store.processedImage}
           selectedPhotoSize={store.selectedPhotoSize}
           selectedPaperSize={store.selectedPaperSize}
           marginMm={store.marginMm}
@@ -254,7 +343,7 @@ export default function HomePage() {
           onCutMarksChange={store.setCutMarks}
           onBorderChange={store.setBorder}
           onCopiesChange={store.setCopies}
-          onBack={() => safeStepChange("processing")}
+          onBack={() => safeStepChange("optimize")}
           onPrint={handlePrint}
           onDownloadPdf={handleDownloadPdf}
         />

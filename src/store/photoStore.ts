@@ -2,12 +2,23 @@
 
 import { create } from "zustand";
 import { defaultPaperSize, defaultPhotoSize } from "@/lib/layout/presets";
-import { CropArea, CropPoint, PaperSize, PhotoSize, Step } from "@/types/photo";
+import { CropArea, CropPoint, OptimizationValues, PaperSize, PhotoSize, Step } from "@/types/photo";
+
+const defaultOptimizationValues: OptimizationValues = {
+  brightness: 100,
+  contrast: 100,
+  saturation: 100,
+  hue: 0,
+  warmth: 0,
+  reason: "Neutral values applied.",
+};
 
 type PhotoState = {
   currentStep: Step;
   originalImage: string | null;
   processedImage: string | null;
+  optimizedImage: string | null;
+  optimizationValues: OptimizationValues;
   crop: CropPoint;
   cropZoom: number;
   cropAreaPixels: CropArea | null;
@@ -22,6 +33,9 @@ type PhotoState = {
   setCurrentStep: (step: Step) => void;
   setOriginalImage: (image: string | null) => void;
   setProcessedImage: (image: string | null) => void;
+  setOptimizedImage: (image: string | null) => void;
+  setOptimizationValues: (values: OptimizationValues) => void;
+  resetOptimization: () => void;
   setCrop: (crop: CropPoint) => void;
   setCropZoom: (zoom: number) => void;
   setCropAreaPixels: (area: CropArea | null) => void;
@@ -38,12 +52,14 @@ type PhotoState = {
   reset: () => void;
 };
 
-const stepOrder: Step[] = ["upload", "processing", "layout"];
+const stepOrder: Step[] = ["upload", "processing", "optimize", "layout"];
 
 const initialState = {
   currentStep: "upload" as Step,
   originalImage: null,
   processedImage: null,
+  optimizedImage: null,
+  optimizationValues: defaultOptimizationValues,
   crop: { x: 0, y: 0 },
   cropZoom: 1,
   cropAreaPixels: null,
@@ -62,6 +78,13 @@ export const usePhotoStore = create<PhotoState>((set) => ({
   setCurrentStep: (currentStep) => set({ currentStep }),
   setOriginalImage: (originalImage) => set({ originalImage }),
   setProcessedImage: (processedImage) => set({ processedImage }),
+  setOptimizedImage: (optimizedImage) => set({ optimizedImage }),
+  setOptimizationValues: (optimizationValues) => set({ optimizationValues }),
+  resetOptimization: () =>
+    set({
+      optimizedImage: null,
+      optimizationValues: defaultOptimizationValues,
+    }),
   setCrop: (crop) => set({ crop }),
   setCropZoom: (cropZoom) => set({ cropZoom }),
   setCropAreaPixels: (cropAreaPixels) => set({ cropAreaPixels }),

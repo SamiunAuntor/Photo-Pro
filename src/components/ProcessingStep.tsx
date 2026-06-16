@@ -34,7 +34,7 @@ export function ProcessingStep({
                 Crop Preview
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Review the original upload beside the prepared passport crop before creating the print layout.
+                Review the original upload beside the prepared passport crop before moving into photo optimization.
               </p>
             </div>
             <div className="hidden rounded-full border border-[#d9deef] bg-[#eef2ff] px-4 py-2 text-sm text-slate-700 md:inline-flex md:items-center md:gap-2">
@@ -43,7 +43,7 @@ export function ProcessingStep({
               ) : (
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
               )}
-              {isLoading ? "Preparing crop preview..." : "Ready for print layout"}
+              {isLoading ? "Preparing crop preview..." : "Ready for optimization"}
             </div>
           </div>
 
@@ -64,12 +64,12 @@ export function ProcessingStep({
             <h3 className="font-geist text-[24px] font-semibold text-slate-900">
               Preview Details
             </h3>
-            <p className="mt-2 text-sm text-slate-500">Confirm the crop before layout generation</p>
+            <p className="mt-2 text-sm text-slate-500">Confirm the crop before optimization</p>
           </div>
           <div className="mt-4 space-y-3 text-sm text-slate-600">
             <Detail text="Original photo stays untouched as your source image." />
             <Detail text="The cropped photo is what will be repeated on the print sheet." />
-            <Detail text={warning ?? "The crop is ready for layout preview and PDF export."} />
+            <Detail text={warning ?? "The crop is ready for optimization and final layout generation."} />
           </div>
 
           <div className="mt-auto flex gap-3 pt-6">

@@ -1,4 +1,4 @@
-import { FileImage, Grid2x2, Upload } from "lucide-react";
+import { FileImage, Grid2x2, Sparkles, Upload } from "lucide-react";
 import logoMark from "@/assets/logo-ii.png";
 import { Step } from "@/types/photo";
 
@@ -9,6 +9,7 @@ const stepConfig: {
 }[] = [
     { id: "upload", label: "Upload", icon: Upload },
     { id: "processing", label: "Preview", icon: FileImage },
+    { id: "optimize", label: "Optimize", icon: Sparkles },
     { id: "layout", label: "Layout", icon: Grid2x2 },
   ];
 
