@@ -21,27 +21,45 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function degreeToRadian(degree: number) {
+  return (degree * Math.PI) / 180;
+}
+
+function getRotatedSize(width: number, height: number, rotation: number) {
+  const radians = degreeToRadian(rotation);
+
+  return {
+    width:
+      Math.abs(Math.cos(radians) * width) + Math.abs(Math.sin(radians) * height),
+    height:
+      Math.abs(Math.sin(radians) * width) + Math.abs(Math.cos(radians) * height),
+  };
+}
+
 export async function getCenteredCropArea({
   imageSrc,
   aspect,
+  rotation = 0,
 }: {
   imageSrc: string;
   aspect: number;
+  rotation?: number;
 }): Promise<CropArea> {
   const image = await loadImage(imageSrc);
-  const imageAspect = image.naturalWidth / image.naturalHeight;
+  const rotated = getRotatedSize(image.naturalWidth, image.naturalHeight, rotation);
+  const imageAspect = rotated.width / rotated.height;
 
-  let width = image.naturalWidth;
+  let width = rotated.width;
   let height = width / aspect;
 
   if (imageAspect < aspect) {
-    height = image.naturalHeight;
+    height = rotated.height;
     width = height * aspect;
   }
 
   return {
-    x: Math.round((image.naturalWidth - width) / 2),
-    y: Math.round((image.naturalHeight - height) / 2),
+    x: Math.round((rotated.width - width) / 2),
+    y: Math.round((rotated.height - height) / 2),
     width: Math.round(width),
     height: Math.round(height),
   };
@@ -51,14 +69,17 @@ export async function getPixelCropFromStoredArea({
   imageSrc,
   storedArea,
   aspect,
+  rotation = 0,
 }: {
   imageSrc: string;
   storedArea: CropArea;
   aspect: number;
+  rotation?: number;
 }): Promise<CropArea> {
   const image = await loadImage(imageSrc);
-  const naturalWidth = image.naturalWidth;
-  const naturalHeight = image.naturalHeight;
+  const rotated = getRotatedSize(image.naturalWidth, image.naturalHeight, rotation);
+  const naturalWidth = rotated.width;
+  const naturalHeight = rotated.height;
   const centerX = naturalWidth * ((storedArea.x + storedArea.width / 2) / 100);
   const centerY = naturalHeight * ((storedArea.y + storedArea.height / 2) / 100);
   const storedWidth = naturalWidth * (storedArea.width / 100);
@@ -101,11 +122,13 @@ export async function getCroppedImageDataUrl({
   pixelCrop,
   outputWidth,
   outputHeight,
+  rotation = 0,
 }: {
   imageSrc: string;
   pixelCrop: CropArea;
   outputWidth: number;
   outputHeight: number;
+  rotation?: number;
 }): Promise<string> {
   const image = await loadImage(imageSrc);
   const canvas = document.createElement("canvas");
@@ -118,9 +141,35 @@ export async function getCroppedImageDataUrl({
   canvas.width = Math.max(1, Math.round(outputWidth));
   canvas.height = Math.max(1, Math.round(outputHeight));
 
+  const safeRotation = rotation % 360;
+  const rotatedBounds = getRotatedSize(
+    image.naturalWidth,
+    image.naturalHeight,
+    safeRotation,
+  );
+  const tempCanvas = document.createElement("canvas");
+  const tempContext = tempCanvas.getContext("2d");
+
+  if (!tempContext) {
+    throw new Error("Temporary canvas is not available.");
+  }
+
+  tempCanvas.width = Math.max(1, Math.round(rotatedBounds.width));
+  tempCanvas.height = Math.max(1, Math.round(rotatedBounds.height));
+
+  tempContext.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+  tempContext.rotate(degreeToRadian(safeRotation));
+  tempContext.drawImage(
+    image,
+    -image.naturalWidth / 2,
+    -image.naturalHeight / 2,
+    image.naturalWidth,
+    image.naturalHeight,
+  );
+
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(
-    image,
+    tempCanvas,
     pixelCrop.x,
     pixelCrop.y,
     pixelCrop.width,

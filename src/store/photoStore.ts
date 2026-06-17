@@ -21,6 +21,7 @@ type PhotoState = {
   optimizationValues: OptimizationValues;
   crop: CropPoint;
   cropZoom: number;
+  cropRotation: number;
   cropAreaPixels: CropArea | null;
   cropAreaPercent: CropArea | null;
   selectedPhotoSize: PhotoSize;
@@ -38,6 +39,7 @@ type PhotoState = {
   resetOptimization: () => void;
   setCrop: (crop: CropPoint) => void;
   setCropZoom: (zoom: number) => void;
+  setCropRotation: (rotation: number) => void;
   setCropAreaPixels: (area: CropArea | null) => void;
   setCropAreaPercent: (area: CropArea | null) => void;
   setSelectedPhotoSize: (size: PhotoSize) => void;
@@ -62,6 +64,7 @@ const initialState = {
   optimizationValues: defaultOptimizationValues,
   crop: { x: 0, y: 0 },
   cropZoom: 1,
+  cropRotation: 0,
   cropAreaPixels: null,
   cropAreaPercent: null,
   selectedPhotoSize: defaultPhotoSize,
@@ -87,6 +90,7 @@ export const usePhotoStore = create<PhotoState>((set) => ({
     }),
   setCrop: (crop) => set({ crop }),
   setCropZoom: (cropZoom) => set({ cropZoom }),
+  setCropRotation: (cropRotation) => set({ cropRotation }),
   setCropAreaPixels: (cropAreaPixels) => set({ cropAreaPixels }),
   setCropAreaPercent: (cropAreaPercent) => set({ cropAreaPercent }),
   setSelectedPhotoSize: (selectedPhotoSize) => set({ selectedPhotoSize }),

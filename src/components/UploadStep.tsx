@@ -3,7 +3,17 @@
 import "react-easy-crop/react-easy-crop.css";
 
 import Cropper from "react-easy-crop";
-import { CircleAlert, FileBadge2, FileImage, ImagePlus, RefreshCcw, Replace, ZoomIn } from "lucide-react";
+import {
+  CircleAlert,
+  FileBadge2,
+  FileImage,
+  ImagePlus,
+  RefreshCcw,
+  Replace,
+  RotateCcw,
+  RotateCw,
+  ZoomIn,
+} from "lucide-react";
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { fileToDataUrl } from "@/lib/image/fileToDataUrl";
@@ -14,6 +24,7 @@ type UploadStepProps = {
   image: string | null;
   crop: CropPoint;
   cropZoom: number;
+  cropRotation: number;
   selectedPhotoSize: PhotoSize;
   selectedPaperSize: PaperSize;
   warning?: string | null;
@@ -21,6 +32,7 @@ type UploadStepProps = {
   onUpload: (image: string) => void;
   onCropChange: (crop: CropPoint) => void;
   onCropZoomChange: (zoom: number) => void;
+  onCropRotationChange: (rotation: number) => void;
   onCropComplete: (areaPercent: CropArea, areaPixels: CropArea) => void;
   onPhotoSizeChange: (size: PhotoSize) => void;
   onNext: () => void;
@@ -31,6 +43,7 @@ export function UploadStep({
   image,
   crop,
   cropZoom,
+  cropRotation,
   selectedPhotoSize,
   selectedPaperSize,
   warning,
@@ -38,6 +51,7 @@ export function UploadStep({
   onUpload,
   onCropChange,
   onCropZoomChange,
+  onCropRotationChange,
   onCropComplete,
   onPhotoSizeChange,
   onNext,
@@ -86,6 +100,7 @@ export function UploadStep({
                   image={image}
                   crop={crop}
                   zoom={cropZoom}
+                  rotation={cropRotation}
                   aspect={aspect}
                   showGrid={false}
                   cropShape="rect"
@@ -103,6 +118,7 @@ export function UploadStep({
                   }}
                   onCropChange={onCropChange}
                   onZoomChange={onCropZoomChange}
+                  onRotationChange={onCropRotationChange}
                   onCropComplete={(areaPercent, areaPixels) =>
                     onCropComplete(areaPercent as CropArea, areaPixels as CropArea)
                   }
@@ -126,7 +142,42 @@ export function UploadStep({
                   />
                 </div>
 
+                <div className="w-full max-w-[520px]">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <RotateCw className="h-4 w-4 text-brand-600" />
+                      Rotate
+                    </span>
+                    <span>{cropRotation}&deg;</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-180}
+                    max={180}
+                    step={1}
+                    value={cropRotation}
+                    onChange={(event) => onCropRotationChange(Number(event.target.value))}
+                    className="w-full accent-brand-600"
+                  />
+                </div>
+
                 <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onCropRotationChange(cropRotation - 90)}
+                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Rotate Left
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCropRotationChange(cropRotation + 90)}
+                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <RotateCw className="h-4 w-4" />
+                    Rotate Right
+                  </button>
                   <button
                     type="button"
                     onClick={open}

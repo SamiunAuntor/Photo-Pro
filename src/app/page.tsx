@@ -26,6 +26,11 @@ import { PhotoSize, PrintJob, Step } from "@/types/photo";
 
 const OUTPUT_PIXELS_PER_MM = 20;
 
+function normalizeRotation(rotation: number) {
+  const normalized = ((rotation + 180) % 360 + 360) % 360 - 180;
+  return normalized === -180 ? 180 : normalized;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const store = usePhotoStore();
@@ -43,6 +48,7 @@ export default function HomePage() {
 
       const activePhotoSize = photoSizeOverride ?? store.selectedPhotoSize;
       const aspect = activePhotoSize.widthMm / activePhotoSize.heightMm;
+      const rotation = store.cropRotation;
 
       setIsPreparingCrop(true);
 
@@ -52,10 +58,12 @@ export default function HomePage() {
               imageSrc: store.originalImage,
               storedArea: store.cropAreaPercent,
               aspect,
+              rotation,
             })
           : await getCenteredCropArea({
               imageSrc: store.originalImage,
               aspect,
+              rotation,
             });
 
         const croppedImage = await getCroppedImageDataUrl({
@@ -63,6 +71,7 @@ export default function HomePage() {
           pixelCrop,
           outputWidth: Math.round(activePhotoSize.widthMm * OUTPUT_PIXELS_PER_MM),
           outputHeight: Math.round(activePhotoSize.heightMm * OUTPUT_PIXELS_PER_MM),
+          rotation,
         });
 
         store.setCropAreaPixels(pixelCrop);
@@ -197,6 +206,7 @@ export default function HomePage() {
           image={store.originalImage}
           crop={store.crop}
           cropZoom={store.cropZoom}
+          cropRotation={store.cropRotation}
           selectedPhotoSize={store.selectedPhotoSize}
           selectedPaperSize={store.selectedPaperSize}
           warning={cropWarning}
@@ -206,6 +216,7 @@ export default function HomePage() {
             store.setProcessedImage(null);
             store.setCrop({ x: 0, y: 0 });
             store.setCropZoom(1);
+            store.setCropRotation(0);
             store.setCropAreaPixels(null);
             store.setCropAreaPercent(null);
             store.resetOptimization();
@@ -219,6 +230,11 @@ export default function HomePage() {
           }}
           onCropZoomChange={(zoom) => {
             store.setCropZoom(zoom);
+            store.setProcessedImage(null);
+            store.resetOptimization();
+          }}
+          onCropRotationChange={(rotation) => {
+            store.setCropRotation(normalizeRotation(rotation));
             store.setProcessedImage(null);
             store.resetOptimization();
           }}
