@@ -58,6 +58,20 @@ function scheduleBackgroundRemoverWarmup(task: () => void) {
   window.setTimeout(task, 200);
 }
 
+async function waitForNextPaint() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+
+  await new Promise<void>((resolve) => {
+    window.setTimeout(() => resolve(), 0);
+  });
+}
+
 export default function HomePage() {
   const router = useRouter();
   const store = usePhotoStore();
@@ -345,6 +359,8 @@ export default function HomePage() {
             store.setProcessedImage(null);
             store.resetOptimization();
             setCropWarning(null);
+
+            await waitForNextPaint();
 
             try {
               const resultBlob = await removeBackgroundInBrowser(
