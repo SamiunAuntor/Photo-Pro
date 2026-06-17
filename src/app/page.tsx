@@ -356,68 +356,9 @@ export default function HomePage() {
               );
               const resultDataUrl = await fileToDataUrl(resultBlob);
               store.setBackgroundRemovedImage(resultDataUrl);
-              store.setBackgroundRemovalStatus("ready");
-              store.setBackgroundRemovalProgress(100);
-              store.setBackgroundRemovalMessage("Finalizing image...");
-              store.setBackgroundRemovalError(null);
-            } catch {
-              store.setBackgroundRemovedImage(null);
-              store.setBackgroundRemovalStatus("error");
+              store.setBackgroundRemovalStatus("applied");
               store.setBackgroundRemovalProgress(null);
               store.setBackgroundRemovalMessage(null);
-              store.setBackgroundRemovalError(
-                "Background removal could not be completed on this device. You can retry or continue with the original photo.",
-              );
-            }
-          }}
-          onUseBackgroundRemovedResult={() => {
-            store.setBackgroundRemovalStatus("applied");
-            store.setBackgroundRemovalMessage(null);
-            store.setBackgroundRemovalError(null);
-            store.setProcessedImage(null);
-            store.resetOptimization();
-          }}
-          onSkipBackgroundRemoval={() => {
-            store.setBackgroundRemovalStatus("skipped");
-            store.setBackgroundRemovalProgress(null);
-            store.setBackgroundRemovalMessage(null);
-            store.setBackgroundRemovalError(null);
-            store.setProcessedImage(null);
-            store.resetOptimization();
-            setCropWarning(null);
-          }}
-          onUseOriginalImage={() => {
-            store.setBackgroundRemovalStatus("skipped");
-            store.setBackgroundRemovalProgress(null);
-            store.setBackgroundRemovalMessage(null);
-            store.setBackgroundRemovalError(null);
-            store.setProcessedImage(null);
-            store.resetOptimization();
-          }}
-          onRetryBackgroundRemoval={async () => {
-            if (!store.originalFile) {
-              return;
-            }
-
-            store.setBackgroundRemovedImage(null);
-            store.setBackgroundRemovalStatus("loading");
-            store.setBackgroundRemovalProgress(0);
-            store.setBackgroundRemovalMessage("Preparing background remover...");
-            store.setBackgroundRemovalError(null);
-
-            try {
-              const resultBlob = await removeBackgroundInBrowser(
-                store.originalFile,
-                (progress) => {
-                  store.setBackgroundRemovalProgress(progress.percentage ?? null);
-                  store.setBackgroundRemovalMessage(progress.message ?? null);
-                },
-              );
-              const resultDataUrl = await fileToDataUrl(resultBlob);
-              store.setBackgroundRemovedImage(resultDataUrl);
-              store.setBackgroundRemovalStatus("ready");
-              store.setBackgroundRemovalProgress(100);
-              store.setBackgroundRemovalMessage("Finalizing image...");
               store.setBackgroundRemovalError(null);
             } catch {
               store.setBackgroundRemovedImage(null);

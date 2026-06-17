@@ -14,6 +14,7 @@ import {
   Replace,
   RotateCcw,
   RotateCw,
+  Scissors,
   ZoomIn,
 } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -51,10 +52,6 @@ type UploadStepProps = {
   isGenerating: boolean;
   onUpload: (file: File, image: string) => void;
   onRemoveBackground: () => void;
-  onUseBackgroundRemovedResult: () => void;
-  onSkipBackgroundRemoval: () => void;
-  onUseOriginalImage: () => void;
-  onRetryBackgroundRemoval: () => void;
   onBackgroundColorChange: (color: string) => void;
   onCropChange: (crop: CropPoint) => void;
   onCropZoomChange: (zoom: number) => void;
@@ -84,10 +81,6 @@ export function UploadStep({
   isGenerating,
   onUpload,
   onRemoveBackground,
-  onUseBackgroundRemovedResult,
-  onSkipBackgroundRemoval,
-  onUseOriginalImage,
-  onRetryBackgroundRemoval,
   onBackgroundColorChange,
   onCropChange,
   onCropZoomChange,
@@ -129,9 +122,7 @@ export function UploadStep({
   });
 
   const aspect = selectedPhotoSize.widthMm / selectedPhotoSize.heightMm;
-  const canShowCropper =
-    backgroundRemovalStatus === "skipped" ||
-    (backgroundRemovalStatus === "applied" && Boolean(backgroundRemovedImage));
+  const canShowCropper = Boolean(image);
   const isRemovingBackground = backgroundRemovalStatus === "loading";
   const backgroundLabel =
     backgroundRemovalStatus !== "applied"
@@ -151,7 +142,7 @@ export function UploadStep({
           Upload Photo
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Upload a photo, optionally remove the background in your browser, then crop and position it for printing.
+          Upload and position your photo first. If needed, remove the background from this same screen before continuing.
         </p>
 
         <div
@@ -271,6 +262,23 @@ export function UploadStep({
                   </button>
                   <button
                     type="button"
+                    onClick={onRemoveBackground}
+                    disabled={isRemovingBackground || !originalFile}
+                    className={`inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-medium transition disabled:cursor-not-allowed ${
+                      isRemovingBackground
+                        ? "border border-brand-600 bg-brand-600 text-white shadow-[0_8px_24px_rgba(83,75,221,0.22)]"
+                        : "border border-[#d3d8ea] bg-white text-slate-700 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400"
+                    }`}
+                  >
+                    {isRemovingBackground ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Scissors className="h-4 w-4" />
+                    )}
+                    {isRemovingBackground ? "Removing Background..." : "Remove Background"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={onReset}
                     className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
@@ -280,39 +288,22 @@ export function UploadStep({
                 </div>
               </div>
 
-              {warning ? (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
-                  {warning}
-                </div>
-              ) : null}
-            </div>
-          ) : image ? (
-            <div className="flex h-full w-full flex-col">
-              {isRemovingBackground ? (
-                <div className="flex min-h-[420px] flex-col items-center justify-center gap-4">
-                  <LoaderCircle className="h-8 w-8 animate-spin text-brand-600" />
-                  <div className="space-y-2">
-                    <p className="font-medium text-slate-900">
-                      {backgroundRemovalMessage ?? "Preparing background remover..."}
-                    </p>
-                    {typeof backgroundRemovalProgress === "number" ? (
-                      <p className="text-sm text-slate-500">{backgroundRemovalProgress}%</p>
+              {isRemovingBackground || backgroundRemovalStatus === "applied" ? (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-xl border border-[#d9deef] bg-white px-3 py-2 text-sm text-slate-600">
+                    <PaintBucket className="h-4 w-4 text-brand-600" />
+                    {isRemovingBackground
+                      ? backgroundRemovalMessage ?? "Removing background..."
+                      : "Background color"}
+                    {isRemovingBackground && typeof backgroundRemovalProgress === "number" ? (
+                      <span className="font-medium text-brand-700">
+                        {backgroundRemovalProgress}%
+                      </span>
                     ) : null}
                   </div>
-                </div>
-              ) : backgroundRemovalStatus === "ready" && backgroundRemovedImage ? (
-                <div className="flex flex-col gap-5">
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <PreviewCard title="Original" image={image} />
-                    <PreviewCard title="Background Removed" image={backgroundRemovedImage} checkerboard />
-                  </div>
 
-                  <div className="rounded-xl border border-[#d9deef] bg-white p-4 text-left">
-                    <div className="flex items-center gap-2">
-                      <PaintBucket className="h-4 w-4 text-brand-600" />
-                      <p className="text-sm font-medium text-slate-900">Background Color</p>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                  {backgroundRemovalStatus === "applied" ? (
+                    <>
                       <ColorChoice
                         label="Blue"
                         value={DEFAULT_ID_BACKGROUND_COLOR}
@@ -334,7 +325,7 @@ export function UploadStep({
                         swatch="checkerboard"
                         onClick={onBackgroundColorChange}
                       />
-                      <label className="inline-flex items-center gap-2 rounded-xl border border-[#d3d8ea] bg-white px-3 py-2 text-sm text-slate-700">
+                      <label className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#d3d8ea] bg-white px-3 text-sm text-slate-700">
                         <span>Custom</span>
                         <input
                           type="color"
@@ -344,80 +335,31 @@ export function UploadStep({
                               : selectedBackgroundColor
                           }
                           onChange={(event) => onBackgroundColorChange(event.target.value)}
-                          className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0"
+                          className="h-7 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
                         />
                       </label>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={onUseBackgroundRemovedResult}
-                      className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white transition hover:bg-brand-700"
-                    >
-                      Use This Result
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onRetryBackgroundRemoval}
-                      className="inline-flex h-11 items-center justify-center rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Retry
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onUseOriginalImage}
-                      className="inline-flex h-11 items-center justify-center rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Use Original
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-5">
-                  <div className="overflow-hidden border border-[#d9deef] bg-white p-3">
-                    <div className="flex h-[380px] items-center justify-center overflow-hidden border border-[#e3e6f2] bg-[#f8f9ff] p-3">
-                      <img src={image} alt="Original upload" className="h-full w-full object-contain" />
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-[#d9deef] bg-white px-4 py-3 text-left text-sm text-slate-600">
-                    Background removal runs in your browser. No API key is required.
-                  </div>
-
-                  {backgroundRemovalError ? (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
-                      {backgroundRemovalError}
-                    </div>
+                    </>
                   ) : null}
-
-                  <div className="flex flex-wrap items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={onRemoveBackground}
-                      disabled={isRemovingBackground || !originalFile}
-                      className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      Remove Background
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onSkipBackgroundRemoval}
-                      className="inline-flex h-11 items-center justify-center rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Skip - Background Already Removed
-                    </button>
-                    <button
-                      type="button"
-                      onClick={open}
-                      className="inline-flex h-11 items-center justify-center rounded-xl border border-[#d3d8ea] bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Choose Another Photo
-                    </button>
-                  </div>
                 </div>
-              )}
+              ) : null}
+
+              {warning ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
+                  {warning}
+                </div>
+              ) : null}
+
+              {backgroundRemovalError ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-sm text-amber-800">
+                  {backgroundRemovalError}
+                </div>
+              ) : null}
+
+              {backgroundRemovalStatus === "applied" ? (
+                <div className="mt-4 text-center text-sm text-slate-500">
+                  Background removed and applied to the current crop view.
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="m-auto">
@@ -498,7 +440,7 @@ export function UploadStep({
           <button
             type="button"
             onClick={onNext}
-            disabled={!canShowCropper || isGenerating}
+            disabled={!image || isGenerating}
             className="flex h-12 w-full items-center justify-center rounded-xl bg-[#eef1fb] text-sm font-medium text-slate-500 transition hover:bg-[#e4e9fb] disabled:cursor-not-allowed disabled:opacity-100 enabled:bg-brand-600 enabled:text-white"
           >
             {isGenerating ? "Preparing crop..." : "Next"}
@@ -506,29 +448,6 @@ export function UploadStep({
         </div>
       </aside>
     </section>
-  );
-}
-
-function PreviewCard({
-  title,
-  image,
-  checkerboard = false,
-}: {
-  title: string;
-  image: string;
-  checkerboard?: boolean;
-}) {
-  return (
-    <div className="overflow-hidden border border-[#d9deef] bg-white p-3">
-      <p className="mb-3 text-sm text-slate-600">{title}</p>
-      <div
-        className={`flex h-[260px] items-center justify-center overflow-hidden border border-[#e3e6f2] p-3 ${
-          checkerboard ? "checkerboard-bg" : "bg-[#f8f9ff]"
-        }`}
-      >
-        <img src={image} alt={title} className="h-full w-full object-contain" />
-      </div>
-    </div>
   );
 }
 
@@ -549,7 +468,7 @@ function ColorChoice({
     <button
       type="button"
       onClick={() => onClick(value)}
-      className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition ${
+      className={`inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-sm transition ${
         selected
           ? "border-brand-600 bg-brand-50 text-brand-700"
           : "border-[#d3d8ea] bg-white text-slate-700 hover:bg-slate-50"
