@@ -15,10 +15,18 @@ import {
   normalizeOptimizationValues,
 } from "@/lib/image/applyOptimization";
 import {
+  composeBackground,
+  DEFAULT_ID_BACKGROUND_COLOR,
+  TRANSPARENT_BACKGROUND_VALUE,
+} from "@/lib/image/composeBackground";
+import {
   getCenteredCropArea,
   getCroppedImageDataUrl,
   getPixelCropFromStoredArea,
 } from "@/lib/image/cropImage";
+import { fileToDataUrl } from "@/lib/image/fileToDataUrl";
+import { warmBackgroundRemover } from "@/lib/image/backgroundRemovalRuntime";
+import { removeBackgroundInBrowser } from "@/lib/image/removeBackgroundBrowser";
 import { createPrintJob } from "@/lib/print/createPrintJob";
 import { savePrintJob } from "@/lib/print/printJobStorage";
 import { usePhotoStore } from "@/store/photoStore";
@@ -31,18 +39,86 @@ function normalizeRotation(rotation: number) {
   return normalized === -180 ? 180 : normalized;
 }
 
+function scheduleBackgroundRemoverWarmup(task: () => void) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const requestIdleCallback = (
+    window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+    }
+  ).requestIdleCallback;
+
+  if (requestIdleCallback) {
+    requestIdleCallback(() => task(), { timeout: 1200 });
+    return;
+  }
+
+  window.setTimeout(task, 200);
+}
+
 export default function HomePage() {
   const router = useRouter();
   const store = usePhotoStore();
   const [isPreparingCrop, setIsPreparingCrop] = useState(false);
   const [isAutoOptimizing, setIsAutoOptimizing] = useState(false);
   const [isApplyingOptimization, setIsApplyingOptimization] = useState(false);
+  const [cropperPreviewImage, setCropperPreviewImage] = useState<string | null>(null);
   const [cropWarning, setCropWarning] = useState<string | null>(null);
   const [optimizeWarning, setOptimizeWarning] = useState<string | null>(null);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function syncCropPreview() {
+      if (store.backgroundRemovalStatus === "applied" && store.backgroundRemovedImage) {
+        if (store.selectedBackgroundColor === TRANSPARENT_BACKGROUND_VALUE) {
+          setCropperPreviewImage(store.backgroundRemovedImage);
+          return;
+        }
+
+        try {
+          const composed = await composeBackground(
+            store.backgroundRemovedImage,
+            store.selectedBackgroundColor,
+          );
+
+          if (!isCancelled) {
+            setCropperPreviewImage(composed);
+          }
+        } catch {
+          if (!isCancelled) {
+            setCropperPreviewImage(store.backgroundRemovedImage);
+          }
+        }
+
+        return;
+      }
+
+      setCropperPreviewImage(store.originalImage);
+    }
+
+    void syncCropPreview();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    store.backgroundRemovedImage,
+    store.backgroundRemovalStatus,
+    store.originalImage,
+    store.selectedBackgroundColor,
+  ]);
+
   const generateCrop = useCallback(
     async (photoSizeOverride?: PhotoSize) => {
-      if (!store.originalImage) {
+      const cropSourceImage =
+        store.backgroundRemovalStatus === "applied" && store.backgroundRemovedImage
+          ? store.backgroundRemovedImage
+          : store.originalImage;
+
+      if (!cropSourceImage) {
         return false;
       }
 
@@ -55,24 +131,32 @@ export default function HomePage() {
       try {
         const pixelCrop = store.cropAreaPercent
           ? await getPixelCropFromStoredArea({
-              imageSrc: store.originalImage,
+              imageSrc: cropSourceImage,
               storedArea: store.cropAreaPercent,
               aspect,
               rotation,
             })
           : await getCenteredCropArea({
-              imageSrc: store.originalImage,
+              imageSrc: cropSourceImage,
               aspect,
               rotation,
             });
 
-        const croppedImage = await getCroppedImageDataUrl({
-          imageSrc: store.originalImage,
+        let croppedImage = await getCroppedImageDataUrl({
+          imageSrc: cropSourceImage,
           pixelCrop,
           outputWidth: Math.round(activePhotoSize.widthMm * OUTPUT_PIXELS_PER_MM),
           outputHeight: Math.round(activePhotoSize.heightMm * OUTPUT_PIXELS_PER_MM),
           rotation,
         });
+
+        if (
+          store.backgroundRemovalStatus === "applied" &&
+          store.backgroundRemovedImage &&
+          store.selectedBackgroundColor !== TRANSPARENT_BACKGROUND_VALUE
+        ) {
+          croppedImage = await composeBackground(croppedImage, store.selectedBackgroundColor);
+        }
 
         store.setCropAreaPixels(pixelCrop);
         store.setProcessedImage(croppedImage);
@@ -204,6 +288,14 @@ export default function HomePage() {
       {store.currentStep === "upload" ? (
         <UploadStep
           image={store.originalImage}
+          cropperImage={cropperPreviewImage}
+          originalFile={store.originalFile}
+          backgroundRemovedImage={store.backgroundRemovedImage}
+          backgroundRemovalStatus={store.backgroundRemovalStatus}
+          backgroundRemovalProgress={store.backgroundRemovalProgress}
+          backgroundRemovalMessage={store.backgroundRemovalMessage}
+          backgroundRemovalError={store.backgroundRemovalError}
+          selectedBackgroundColor={store.selectedBackgroundColor}
           crop={store.crop}
           cropZoom={store.cropZoom}
           cropRotation={store.cropRotation}
@@ -211,8 +303,15 @@ export default function HomePage() {
           selectedPaperSize={store.selectedPaperSize}
           warning={cropWarning}
           isGenerating={isPreparingCrop}
-          onUpload={(image) => {
+          onUpload={(file, image) => {
+            store.setOriginalFile(file);
             store.setOriginalImage(image);
+            store.setBackgroundRemovedImage(null);
+            store.setBackgroundRemovalStatus("idle");
+            store.setBackgroundRemovalProgress(null);
+            store.setBackgroundRemovalMessage(null);
+            store.setBackgroundRemovalError(null);
+            store.setSelectedBackgroundColor(DEFAULT_ID_BACKGROUND_COLOR);
             store.setProcessedImage(null);
             store.setCrop({ x: 0, y: 0 });
             store.setCropZoom(1);
@@ -220,8 +319,120 @@ export default function HomePage() {
             store.setCropAreaPixels(null);
             store.setCropAreaPercent(null);
             store.resetOptimization();
+            setCropperPreviewImage(image);
             setCropWarning(null);
             setOptimizeWarning(null);
+
+            scheduleBackgroundRemoverWarmup(() => {
+              void warmBackgroundRemover((progress) => {
+                store.setBackgroundRemovalProgress(progress.percentage ?? null);
+                store.setBackgroundRemovalMessage(progress.message ?? null);
+              }).catch(() => {
+                store.setBackgroundRemovalProgress(null);
+                store.setBackgroundRemovalMessage(null);
+              });
+            });
+          }}
+          onRemoveBackground={async () => {
+            if (!store.originalFile) {
+              return;
+            }
+
+            store.setBackgroundRemovalStatus("loading");
+            store.setBackgroundRemovalProgress(0);
+            store.setBackgroundRemovalMessage("Preparing background remover...");
+            store.setBackgroundRemovalError(null);
+            store.setProcessedImage(null);
+            store.resetOptimization();
+            setCropWarning(null);
+
+            try {
+              const resultBlob = await removeBackgroundInBrowser(
+                store.originalFile,
+                (progress) => {
+                  store.setBackgroundRemovalProgress(progress.percentage ?? null);
+                  store.setBackgroundRemovalMessage(progress.message ?? null);
+                },
+              );
+              const resultDataUrl = await fileToDataUrl(resultBlob);
+              store.setBackgroundRemovedImage(resultDataUrl);
+              store.setBackgroundRemovalStatus("ready");
+              store.setBackgroundRemovalProgress(100);
+              store.setBackgroundRemovalMessage("Finalizing image...");
+              store.setBackgroundRemovalError(null);
+            } catch {
+              store.setBackgroundRemovedImage(null);
+              store.setBackgroundRemovalStatus("error");
+              store.setBackgroundRemovalProgress(null);
+              store.setBackgroundRemovalMessage(null);
+              store.setBackgroundRemovalError(
+                "Background removal could not be completed on this device. You can retry or continue with the original photo.",
+              );
+            }
+          }}
+          onUseBackgroundRemovedResult={() => {
+            store.setBackgroundRemovalStatus("applied");
+            store.setBackgroundRemovalMessage(null);
+            store.setBackgroundRemovalError(null);
+            store.setProcessedImage(null);
+            store.resetOptimization();
+          }}
+          onSkipBackgroundRemoval={() => {
+            store.setBackgroundRemovalStatus("skipped");
+            store.setBackgroundRemovalProgress(null);
+            store.setBackgroundRemovalMessage(null);
+            store.setBackgroundRemovalError(null);
+            store.setProcessedImage(null);
+            store.resetOptimization();
+            setCropWarning(null);
+          }}
+          onUseOriginalImage={() => {
+            store.setBackgroundRemovalStatus("skipped");
+            store.setBackgroundRemovalProgress(null);
+            store.setBackgroundRemovalMessage(null);
+            store.setBackgroundRemovalError(null);
+            store.setProcessedImage(null);
+            store.resetOptimization();
+          }}
+          onRetryBackgroundRemoval={async () => {
+            if (!store.originalFile) {
+              return;
+            }
+
+            store.setBackgroundRemovedImage(null);
+            store.setBackgroundRemovalStatus("loading");
+            store.setBackgroundRemovalProgress(0);
+            store.setBackgroundRemovalMessage("Preparing background remover...");
+            store.setBackgroundRemovalError(null);
+
+            try {
+              const resultBlob = await removeBackgroundInBrowser(
+                store.originalFile,
+                (progress) => {
+                  store.setBackgroundRemovalProgress(progress.percentage ?? null);
+                  store.setBackgroundRemovalMessage(progress.message ?? null);
+                },
+              );
+              const resultDataUrl = await fileToDataUrl(resultBlob);
+              store.setBackgroundRemovedImage(resultDataUrl);
+              store.setBackgroundRemovalStatus("ready");
+              store.setBackgroundRemovalProgress(100);
+              store.setBackgroundRemovalMessage("Finalizing image...");
+              store.setBackgroundRemovalError(null);
+            } catch {
+              store.setBackgroundRemovedImage(null);
+              store.setBackgroundRemovalStatus("error");
+              store.setBackgroundRemovalProgress(null);
+              store.setBackgroundRemovalMessage(null);
+              store.setBackgroundRemovalError(
+                "Background removal could not be completed on this device. You can retry or continue with the original photo.",
+              );
+            }
+          }}
+          onBackgroundColorChange={(color) => {
+            store.setSelectedBackgroundColor(color);
+            store.setProcessedImage(null);
+            store.resetOptimization();
           }}
           onCropChange={(crop) => {
             store.setCrop(crop);
@@ -256,6 +467,7 @@ export default function HomePage() {
           }}
           onReset={() => {
             store.reset();
+            setCropperPreviewImage(null);
             setCropWarning(null);
           }}
         />

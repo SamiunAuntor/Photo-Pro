@@ -1,5 +1,13 @@
 export type Step = "upload" | "processing" | "optimize" | "layout";
 
+export type BackgroundRemovalStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "applied"
+  | "skipped"
+  | "error";
+
 export type CropPoint = {
   x: number;
   y: number;

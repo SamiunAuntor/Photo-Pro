@@ -2,7 +2,16 @@
 
 import { create } from "zustand";
 import { defaultPaperSize, defaultPhotoSize } from "@/lib/layout/presets";
-import { CropArea, CropPoint, OptimizationValues, PaperSize, PhotoSize, Step } from "@/types/photo";
+import { DEFAULT_ID_BACKGROUND_COLOR } from "@/lib/image/composeBackground";
+import {
+  BackgroundRemovalStatus,
+  CropArea,
+  CropPoint,
+  OptimizationValues,
+  PaperSize,
+  PhotoSize,
+  Step,
+} from "@/types/photo";
 
 const defaultOptimizationValues: OptimizationValues = {
   brightness: 100,
@@ -15,7 +24,14 @@ const defaultOptimizationValues: OptimizationValues = {
 
 type PhotoState = {
   currentStep: Step;
+  originalFile: File | null;
   originalImage: string | null;
+  backgroundRemovedImage: string | null;
+  backgroundRemovalStatus: BackgroundRemovalStatus;
+  backgroundRemovalProgress: number | null;
+  backgroundRemovalMessage: string | null;
+  backgroundRemovalError: string | null;
+  selectedBackgroundColor: string;
   processedImage: string | null;
   optimizedImage: string | null;
   optimizationValues: OptimizationValues;
@@ -32,7 +48,14 @@ type PhotoState = {
   border: boolean;
   copies: "auto" | number;
   setCurrentStep: (step: Step) => void;
+  setOriginalFile: (file: File | null) => void;
   setOriginalImage: (image: string | null) => void;
+  setBackgroundRemovedImage: (image: string | null) => void;
+  setBackgroundRemovalStatus: (status: BackgroundRemovalStatus) => void;
+  setBackgroundRemovalProgress: (progress: number | null) => void;
+  setBackgroundRemovalMessage: (message: string | null) => void;
+  setBackgroundRemovalError: (error: string | null) => void;
+  setSelectedBackgroundColor: (color: string) => void;
   setProcessedImage: (image: string | null) => void;
   setOptimizedImage: (image: string | null) => void;
   setOptimizationValues: (values: OptimizationValues) => void;
@@ -58,7 +81,14 @@ const stepOrder: Step[] = ["upload", "processing", "optimize", "layout"];
 
 const initialState = {
   currentStep: "upload" as Step,
+  originalFile: null,
   originalImage: null,
+  backgroundRemovedImage: null,
+  backgroundRemovalStatus: "idle" as BackgroundRemovalStatus,
+  backgroundRemovalProgress: null,
+  backgroundRemovalMessage: null,
+  backgroundRemovalError: null,
+  selectedBackgroundColor: DEFAULT_ID_BACKGROUND_COLOR,
   processedImage: null,
   optimizedImage: null,
   optimizationValues: defaultOptimizationValues,
@@ -79,7 +109,14 @@ const initialState = {
 export const usePhotoStore = create<PhotoState>((set) => ({
   ...initialState,
   setCurrentStep: (currentStep) => set({ currentStep }),
+  setOriginalFile: (originalFile) => set({ originalFile }),
   setOriginalImage: (originalImage) => set({ originalImage }),
+  setBackgroundRemovedImage: (backgroundRemovedImage) => set({ backgroundRemovedImage }),
+  setBackgroundRemovalStatus: (backgroundRemovalStatus) => set({ backgroundRemovalStatus }),
+  setBackgroundRemovalProgress: (backgroundRemovalProgress) => set({ backgroundRemovalProgress }),
+  setBackgroundRemovalMessage: (backgroundRemovalMessage) => set({ backgroundRemovalMessage }),
+  setBackgroundRemovalError: (backgroundRemovalError) => set({ backgroundRemovalError }),
+  setSelectedBackgroundColor: (selectedBackgroundColor) => set({ selectedBackgroundColor }),
   setProcessedImage: (processedImage) => set({ processedImage }),
   setOptimizedImage: (optimizedImage) => set({ optimizedImage }),
   setOptimizationValues: (optimizationValues) => set({ optimizationValues }),

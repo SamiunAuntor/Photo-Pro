@@ -30,3 +30,15 @@ npm run dev
 ```
 
 Then open `http://localhost:3000`.
+
+## Background Remover Cache Check
+
+To verify the browser-side background-removal model is being reused instead of fully downloaded every time:
+
+1. Open DevTools and go to the `Network` tab.
+2. Make sure `Disable cache` is unchecked.
+3. Run background removal once.
+4. Refresh the page normally.
+5. Run background removal again.
+6. Inspect the model, WASM, and ONNX requests.
+7. Confirm they show cache reuse such as `memory cache`, `disk cache`, or a `304` response.
