@@ -3,7 +3,7 @@ export function Header() {
     <div className="flex items-center justify-between rounded-[28px] border border-white/70 bg-white/80 px-6 py-5 shadow-card backdrop-blur">
       <div>
         <p className="text-sm font-medium uppercase tracking-[0.28em] text-brand-600">
-          PhotoPro Studio
+          Photosop Mini
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink">
           Print-ready ID photos in three clicks

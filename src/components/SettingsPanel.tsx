@@ -46,6 +46,11 @@ export function SettingsPanel(props: SettingsPanelProps) {
     canContinue,
   } = props;
 
+  const presetCopyValues = [4, 8, 12];
+  const usesCustomCopies = copies !== "auto" && !presetCopyValues.includes(copies);
+  const copySelectValue =
+    copies === "auto" ? "auto" : usesCustomCopies ? "custom" : String(copies);
+
   return (
     <aside className="flex flex-col border-l border-[#d9deef] bg-white">
       <div className="border-b border-[#d9deef] px-5 py-4">
@@ -131,20 +136,47 @@ export function SettingsPanel(props: SettingsPanelProps) {
         <Section title="Copies">
           <Field label="Sheet Fill">
             <select
-              value={copies === "auto" ? "auto" : String(copies)}
-              onChange={(event) =>
-                onCopiesChange(
-                  event.target.value === "auto" ? "auto" : Number(event.target.value),
-                )
-              }
+              value={copySelectValue}
+              onChange={(event) => {
+                if (event.target.value === "auto") {
+                  onCopiesChange("auto");
+                  return;
+                }
+
+                if (event.target.value === "custom") {
+                  onCopiesChange(copies === "auto" ? 1 : Math.max(1, copies));
+                  return;
+                }
+
+                onCopiesChange(Number(event.target.value));
+              }}
               className="h-11 w-full rounded-md border border-[#cfd6ec] bg-white px-3 text-sm text-slate-900 outline-none ring-brand-500 transition focus:ring-2"
             >
               <option value="auto">Auto-fill</option>
               <option value="4">4 copies</option>
               <option value="8">8 copies</option>
               <option value="12">12 copies</option>
+              <option value="custom">Custom</option>
             </select>
           </Field>
+
+          {copySelectValue === "custom" ? (
+            <div className="mt-3">
+              <Field label="Custom Copy Count">
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={copies === "auto" ? 1 : copies}
+                  onChange={(event) => {
+                    const nextValue = Number(event.target.value);
+                    onCopiesChange(Number.isFinite(nextValue) ? Math.max(1, Math.round(nextValue)) : 1);
+                  }}
+                  className="h-11 w-full rounded-md border border-[#cfd6ec] bg-white px-3 text-sm text-slate-900 outline-none ring-brand-500 transition focus:ring-2"
+                />
+              </Field>
+            </div>
+          ) : null}
         </Section>
       </div>
 

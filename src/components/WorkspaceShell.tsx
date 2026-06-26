@@ -33,12 +33,12 @@ export function WorkspaceShell({
           <div className="flex items-center gap-3">
             <img
               src={logoMark.src}
-              alt="Photo Pro"
+              alt="Photosop Mini"
               className="h-11 w-auto object-contain"
             />
             <span className="font-geist text-2xl font-semibold tracking-tight">
-              <span className="text-slate-900">Photo </span>
-              <span className="text-brand-600">Pro</span>
+              <span className="text-slate-900">Photosop </span>
+              <span className="text-brand-600">Mini</span>
             </span>
           </div>
 
@@ -100,7 +100,7 @@ export function WorkspaceShell({
 
       <footer className="border-t border-[#d9deef] bg-white">
         <div className="mx-auto flex w-full max-w-[1500px] items-center justify-center px-4 py-3 text-xs text-slate-500 md:px-6">
-          <span>&copy; 2026 Photo Pro. All rights reserved.</span>
+          <span>&copy; 2026 Photosop Mini. All rights reserved.</span>
         </div>
       </footer>
     </main>

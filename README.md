@@ -1,8 +1,8 @@
-# Photo-Pro
+# Photosop Mini
 
 Live: https://photo-pro-wine.vercel.app/
 
-Photo Pro is a small frontend-only passport and ID photo layout tool. The app is focused on a simple workflow: upload a background-removed photo, crop it to a fixed photo ratio, preview it, and generate a printable layout for paper sizes like A4.
+Photosop Mini is a small frontend-only passport and ID photo layout tool. The app is focused on a simple workflow: upload a background-removed photo, crop it to a fixed photo ratio, preview it, and generate a printable layout for paper sizes like A4.
 
 ## What It Does
 
