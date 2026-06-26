@@ -14,6 +14,7 @@ type LayoutStepProps = {
   cutMarks: boolean;
   border: boolean;
   copies: "auto" | number;
+  customCopiesEnabled: boolean;
   onPhotoSizeChange: (size: PhotoSize) => void;
   onPaperSizeChange: (size: PaperSize) => void;
   onMarginChange: (value: number) => void;
@@ -21,6 +22,7 @@ type LayoutStepProps = {
   onCutMarksChange: (value: boolean) => void;
   onBorderChange: (value: boolean) => void;
   onCopiesChange: (value: "auto" | number) => void;
+  onCustomCopiesEnabledChange: (value: boolean) => void;
   onBack: () => void;
   onPrint: (job: PrintJob, copies: number) => void;
   onDownloadPdf: (job: PrintJob, copies: number) => void;
@@ -36,6 +38,7 @@ export function LayoutStep(props: LayoutStepProps) {
     cutMarks,
     border,
     copies,
+    customCopiesEnabled,
     onPhotoSizeChange,
     onPaperSizeChange,
     onMarginChange,
@@ -43,6 +46,7 @@ export function LayoutStep(props: LayoutStepProps) {
     onCutMarksChange,
     onBorderChange,
     onCopiesChange,
+    onCustomCopiesEnabledChange,
     onBack,
     onPrint,
     onDownloadPdf,
@@ -104,6 +108,7 @@ export function LayoutStep(props: LayoutStepProps) {
         cutMarks={cutMarks}
         border={border}
         copies={copies}
+        customCopiesEnabled={customCopiesEnabled}
         onPhotoSizeChange={onPhotoSizeChange}
         onPaperSizeChange={onPaperSizeChange}
         onMarginChange={onMarginChange}
@@ -111,6 +116,7 @@ export function LayoutStep(props: LayoutStepProps) {
         onCutMarksChange={onCutMarksChange}
         onBorderChange={onBorderChange}
         onCopiesChange={onCopiesChange}
+        onCustomCopiesEnabledChange={onCustomCopiesEnabledChange}
         onBack={onBack}
         onPrint={() => onPrint(job, appliedCopies)}
         onDownloadPdf={() => onDownloadPdf(job, appliedCopies)}

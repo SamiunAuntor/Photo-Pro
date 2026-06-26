@@ -11,6 +11,7 @@ type SettingsPanelProps = {
   cutMarks: boolean;
   border: boolean;
   copies: "auto" | number;
+  customCopiesEnabled: boolean;
   onPhotoSizeChange: (size: PhotoSize) => void;
   onPaperSizeChange: (size: PaperSize) => void;
   onMarginChange: (value: number) => void;
@@ -18,6 +19,7 @@ type SettingsPanelProps = {
   onCutMarksChange: (value: boolean) => void;
   onBorderChange: (value: boolean) => void;
   onCopiesChange: (value: "auto" | number) => void;
+  onCustomCopiesEnabledChange: (value: boolean) => void;
   onBack: () => void;
   onPrint: () => void;
   onDownloadPdf: () => void;
@@ -33,6 +35,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
     cutMarks,
     border,
     copies,
+    customCopiesEnabled,
     onPhotoSizeChange,
     onPaperSizeChange,
     onMarginChange,
@@ -40,6 +43,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
     onCutMarksChange,
     onBorderChange,
     onCopiesChange,
+    onCustomCopiesEnabledChange,
     onBack,
     onPrint,
     onDownloadPdf,
@@ -47,7 +51,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
   } = props;
 
   const presetCopyValues = [4, 8, 12];
-  const usesCustomCopies = copies !== "auto" && !presetCopyValues.includes(copies);
+  const usesCustomCopies = copies !== "auto" && customCopiesEnabled;
   const copySelectValue =
     copies === "auto" ? "auto" : usesCustomCopies ? "custom" : String(copies);
 
@@ -139,15 +143,18 @@ export function SettingsPanel(props: SettingsPanelProps) {
               value={copySelectValue}
               onChange={(event) => {
                 if (event.target.value === "auto") {
+                  onCustomCopiesEnabledChange(false);
                   onCopiesChange("auto");
                   return;
                 }
 
                 if (event.target.value === "custom") {
+                  onCustomCopiesEnabledChange(true);
                   onCopiesChange(copies === "auto" ? 1 : Math.max(1, copies));
                   return;
                 }
 
+                onCustomCopiesEnabledChange(false);
                 onCopiesChange(Number(event.target.value));
               }}
               className="h-11 w-full rounded-md border border-[#cfd6ec] bg-white px-3 text-sm text-slate-900 outline-none ring-brand-500 transition focus:ring-2"

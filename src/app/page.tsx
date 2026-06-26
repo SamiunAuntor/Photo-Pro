@@ -518,6 +518,7 @@ export default function HomePage() {
           cutMarks={store.cutMarks}
           border={store.border}
           copies={store.copies}
+          customCopiesEnabled={store.customCopiesEnabled}
           onPhotoSizeChange={(size) => {
             store.setSelectedPhotoSize(size);
             void generateCrop(size);
@@ -528,6 +529,7 @@ export default function HomePage() {
           onCutMarksChange={store.setCutMarks}
           onBorderChange={store.setBorder}
           onCopiesChange={store.setCopies}
+          onCustomCopiesEnabledChange={store.setCustomCopiesEnabled}
           onBack={() => safeStepChange("optimize")}
           onPrint={handlePrint}
           onDownloadPdf={handleDownloadPdf}

@@ -47,6 +47,7 @@ type PhotoState = {
   cutMarks: boolean;
   border: boolean;
   copies: "auto" | number;
+  customCopiesEnabled: boolean;
   setCurrentStep: (step: Step) => void;
   setOriginalFile: (file: File | null) => void;
   setOriginalImage: (image: string | null) => void;
@@ -72,6 +73,7 @@ type PhotoState = {
   setCutMarks: (value: boolean) => void;
   setBorder: (value: boolean) => void;
   setCopies: (copies: "auto" | number) => void;
+  setCustomCopiesEnabled: (value: boolean) => void;
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   reset: () => void;
@@ -104,6 +106,7 @@ const initialState = {
   cutMarks: false,
   border: false,
   copies: 12 as const,
+  customCopiesEnabled: false,
 };
 
 export const usePhotoStore = create<PhotoState>((set) => ({
@@ -137,6 +140,7 @@ export const usePhotoStore = create<PhotoState>((set) => ({
   setCutMarks: (cutMarks) => set({ cutMarks }),
   setBorder: (border) => set({ border }),
   setCopies: (copies) => set({ copies }),
+  setCustomCopiesEnabled: (customCopiesEnabled) => set({ customCopiesEnabled }),
   goToNextStep: () =>
     set((state) => {
       const currentIndex = stepOrder.indexOf(state.currentStep);
